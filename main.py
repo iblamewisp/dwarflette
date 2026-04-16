@@ -7,7 +7,7 @@ def path(url, method, router):
 			route = Route(url, func, method)
 			print(route.path)
 			router.routes.append(route)
-			return func(*args, **kwargs)
+			return await func(*args, **kwargs)
 		return wrapper 
 	return decorator
 
@@ -19,6 +19,7 @@ class Route:
 	async def handle(self, scope, receive, send):
 		request = Request(scope, receive)
 		await Response(await self.endpoint(request))(scope, receive, send)
+
 class Router:
 	def __init__(self, routes=None):
 		self.routes = routes or []
@@ -27,8 +28,10 @@ class Router:
 		for route in self.routes:
 			print(route.path)
 			print(scope['path'])
-			if scope['path'][1:] == route.path:
-				await route.handle(scope, receive, send)
+			# if scope['path'] == route.path убрал нахуй
+			# он в 10 из 10 случаев не работал нахуй
+			await route.handle(scope, receive, send)
+			
 class Request:
 	def __init__(self, scope, receive):
 		self._scope = scope
