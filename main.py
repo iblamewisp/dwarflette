@@ -3,8 +3,17 @@ import uvicorn
 async def app(scope, receive, send):
 	assert scope['type'] == 'http'
 	request = Request(scope, receive)
-	if request.path == '/test':
-		await Response('Hello, world!', 200, 'text/plain')(scope, receive, send)
+	Route('test', test, ['GET'])
+async def test():
+	return Response(content='hello, svin!')
+class Route:
+	def __init__(self, path, endpoint, methods):
+		self.path = path
+		self.endpoint = endpoint
+		self.methods = methods
+	async def __call__(self, scope, receive, send):
+		if scope['path'] == self.path:
+			await endpoint()
 class Request:
 	def __init__(self, scope, receive):
 		self._scope = scope
