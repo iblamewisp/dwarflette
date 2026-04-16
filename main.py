@@ -1,12 +1,13 @@
 from pprint import pprint
+import asyncio
 import uvicorn
 
-def path(url, method, router):
+def route(url, method, router):
 	def decorator(func):
+		route = Route(url, func, method)
+		print(route.path)
+		router.routes.append(route)
 		async def wrapper(*args, **kwargs):
-			route = Route(url, func, method)
-			print(route.path)
-			router.routes.append(route)
 			return await func(*args, **kwargs)
 		return wrapper 
 	return decorator

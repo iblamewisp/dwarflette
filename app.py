@@ -1,15 +1,14 @@
 import uvicorn
 import asyncio
-from main import Router, path
+from main import Router, route
 
 router = Router()
 
-@path('/test', ['GET'], router)
+@route('/test', ['GET'], router)
 async def test(request):
 	return 'hello, world'
 
 async def app(scope, receive, send):
-	asyncio.create_task(test('hi'))
 	await router(scope, receive, send)
 
 
