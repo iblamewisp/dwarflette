@@ -1,19 +1,34 @@
 from pprint import pprint
 import uvicorn
-async def app(scope, receive, send):
-	assert scope['type'] == 'http'
-	request = Request(scope, receive)
-	Route('test', test, ['GET'])
-async def test():
-	return Response(content='hello, svin!')
+
+def path(url, method, router):
+	def decorator(func):
+		async def wrapper(*args, **kwargs):
+			route = Route(url, func, method)
+			print(route.path)
+			router.routes.append(route)
+			return func(*args, **kwargs)
+		return wrapper 
+	return decorator
+
 class Route:
 	def __init__(self, path, endpoint, methods):
 		self.path = path
 		self.endpoint = endpoint
 		self.methods = methods
+	async def handle(self, scope, receive, send):
+		request = Request(scope, receive)
+		await Response(await self.endpoint(request))(scope, receive, send)
+class Router:
+	def __init__(self, routes=None):
+		self.routes = routes or []
+
 	async def __call__(self, scope, receive, send):
-		if scope['path'] == self.path:
-			await endpoint()
+		for route in self.routes:
+			print(route.path)
+			print(scope['path'])
+			if scope['path'][1:] == route.path:
+				await route.handle(scope, receive, send)
 class Request:
 	def __init__(self, scope, receive):
 		self._scope = scope
@@ -50,5 +65,3 @@ class Response:
 			'body':	self.content.encode('utf-8'),
 		})
 		
-if __name__ == '__main__':
-	uvicorn.run('main:app', port=1488, log_level='info')
