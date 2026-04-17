@@ -1,10 +1,10 @@
 import uvicorn
 import asyncio
-from main import Router, route
+from main import Router
 
 router = Router()
 
-@route('/test', ['GET'], router)
+@router.get('/test')
 async def test(request):
 	return 'hello, world'
 

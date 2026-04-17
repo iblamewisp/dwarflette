@@ -1,21 +1,12 @@
 import asyncio
 import uvicorn
 
-def route(url, method, router):
-	def decorator(func):
-		route = Route(url, func, method)
-		router.routes.append(route)
-		async def wrapper(*args, **kwargs):
-			return await func(*args, **kwargs)
-		return wrapper 
-	return decorator
-
-
 class Route:
 	def __init__(self, path, endpoint, methods):
 		self.path = path
 		self.endpoint = endpoint
-		self.methods = methods
+		self.methods = {m.upper for m in methods}
+	
 	async def handle(self, scope, receive, send):
 		request = Request(scope, receive)
 		await Response(await self.endpoint(request))(scope, receive, send)
@@ -24,7 +15,19 @@ class Route:
 class Router:
 	def __init__(self, routes=None):
 		self.routes = routes or []
-
+	def add_route(self, path, endpoint, methods):
+		self.routes.append(Route(path, endpoint, methods))
+	def route(self, path, methods=['GET']):
+		def decorator(func):
+			self.add_route(path, func, methods)
+			return func
+		return decorator
+	def get(self, path):
+		return self.route(path, ['GET'])
+	def post(self, path):
+		return self.route(path, ['POST'])
+		
+		
 	async def __call__(self, scope, receive, send):
 		for route in self.routes:
 			if scope['path'] == route.path:
