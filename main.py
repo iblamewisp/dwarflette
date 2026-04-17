@@ -3,12 +3,13 @@ import uvicorn
 
 class Route:
 	def __init__(self, path, endpoint, methods):
-		self.path = path
+		_, self.path, self.path_params = path.split('/', 3)
 		self.endpoint = endpoint
 		self.methods = {m.upper for m in methods}
 	
 	async def handle(self, scope, receive, send):
-		request = Request(scope, receive)
+		params = {self.path_params.replace('{', "").replace('}', ""):scope['path'].split('/', 3)[-1]}
+		request = Request(scope, receive, params)
 		await Response(await self.endpoint(request))(scope, receive, send)
 
 
@@ -30,15 +31,19 @@ class Router:
 		
 	async def __call__(self, scope, receive, send):
 		for route in self.routes:
-			if scope['path'] == route.path:
+			path = scope['path'].split('/', 3)[1:]
+			route_path = [route.path, route.path_params]
+			print(path, route_path)
+			if len(path) == len(route_path) and path[0] == route_path[0]:
 				await route.handle(scope, receive, send)
 		
 	
 class Request:
-	def __init__(self, scope, receive):
+	def __init__(self, scope, receive, path_params):
 		self._scope = scope
 		self._receive = receive
-	
+		self.path_params = path_params or {}
+		print(self.path_params)
 	@property
 	def method(self):
 		return self._scope['method']
