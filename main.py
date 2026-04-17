@@ -1,14 +1,19 @@
-import asyncio
-import uvicorn
-
 class Route:
 	def __init__(self, path, endpoint, methods):
-		_, self.path, self.path_params = path.split('/', 3)
+		self.path = path
 		self.endpoint = endpoint
-		self.methods = {m.upper for m in methods}
+		self.methods = {m.upper() for m in methods}
 	
 	async def handle(self, scope, receive, send):
-		params = {self.path_params.replace('{', "").replace('}', ""):scope['path'].split('/', 3)[-1]}
+		request_path = scope['path'].split('/')
+		route_path = self.path.split('/')
+		if len(request_path) != len(route_path): return
+		params = {}
+		for rp, ap in zip(route_path, request_path):
+			if '{' in rp:
+				params[rp[1:-1]] = ap
+			elif rp != ap:
+				return
 		request = Request(scope, receive, params)
 		await Response(await self.endpoint(request))(scope, receive, send)
 
@@ -23,35 +28,22 @@ class Router:
 			self.add_route(path, func, methods)
 			return func
 		return decorator
-	def get(self, path):
-		return self.route(path, ['GET'])
-	def post(self, path):
-		return self.route(path, ['POST'])
-		
-		
+	def get(self, path):return self.route(path, ['GET'])
+	def post(self, path):return self.route(path, ['POST'])
 	async def __call__(self, scope, receive, send):
 		for route in self.routes:
-			path = scope['path'].split('/', 3)[1:]
-			route_path = [route.path, route.path_params]
-			print(path, route_path)
-			if len(path) == len(route_path) and path[0] == route_path[0]:
-				await route.handle(scope, receive, send)
+			await route.handle(scope, receive, send)
 		
-	
 class Request:
-	def __init__(self, scope, receive, path_params):
+	def __init__(self, scope, receive, params):
 		self._scope = scope
 		self._receive = receive
-		self.path_params = path_params or {}
-		print(self.path_params)
+		self.params = params
+		print(self.params)
 	@property
-	def method(self):
-		return self._scope['method']
-	
+	def method(self): return self._scope['method']
 	@property
-	def path(self):
-		return self._scope['path']
-
+	def path(self): return self._scope['path']
 
 class Response:
 	def __init__(self, content=None, status=200, content_type="text/plain", headers=None):
