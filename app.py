@@ -10,7 +10,7 @@ async def test(request):
 
 async def app(scope, receive, send):
 	await router(scope, receive, send)
-
+	
 
 if __name__ == "__main__":
 	uvicorn.run("app:app", port=1488)

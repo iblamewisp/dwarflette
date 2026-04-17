@@ -27,11 +27,8 @@ class Router:
 
 	async def __call__(self, scope, receive, send):
 		for route in self.routes:
-			print(route.path)
-			print(scope['path'])
-			# if scope['path'] == route.path убрал нахуй
-			# он в 10 из 10 случаев не работал нахуй
-			await route.handle(scope, receive, send)
+			if scope['path'] == route.path:
+				await route.handle(scope, receive, send)
 			
 class Request:
 	def __init__(self, scope, receive):
