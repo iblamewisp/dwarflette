@@ -1,16 +1,15 @@
-from pprint import pprint
 import asyncio
 import uvicorn
 
 def route(url, method, router):
 	def decorator(func):
 		route = Route(url, func, method)
-		print(route.path)
 		router.routes.append(route)
 		async def wrapper(*args, **kwargs):
 			return await func(*args, **kwargs)
 		return wrapper 
 	return decorator
+
 
 class Route:
 	def __init__(self, path, endpoint, methods):
@@ -21,6 +20,7 @@ class Route:
 		request = Request(scope, receive)
 		await Response(await self.endpoint(request))(scope, receive, send)
 
+
 class Router:
 	def __init__(self, routes=None):
 		self.routes = routes or []
@@ -29,7 +29,8 @@ class Router:
 		for route in self.routes:
 			if scope['path'] == route.path:
 				await route.handle(scope, receive, send)
-			
+		
+	
 class Request:
 	def __init__(self, scope, receive):
 		self._scope = scope
@@ -43,6 +44,7 @@ class Request:
 	def path(self):
 		return self._scope['path']
 
+
 class Response:
 	def __init__(self, content=None, status=200, content_type="text/plain", headers=None):
 		self.status = status
@@ -52,6 +54,7 @@ class Response:
 			self.content = content
 		else:
 			self.content = b""
+	
 	async def __call__(self, scope, receive, send):
 		await send({
 			'type': 'http.response.start',
