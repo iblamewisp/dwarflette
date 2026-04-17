@@ -1,3 +1,5 @@
+import asyncio
+
 class Route:
 	def __init__(self, path, endpoint, methods):
 		self.path = path
@@ -16,6 +18,25 @@ class Route:
 				return
 		request = Request(scope, receive, params)
 		await Response(await self.endpoint(request))(scope, receive, send)
+
+class Lifespan:
+	def __init__(self, startup, shutdown):
+		self.startup = startup
+		self.shutdown = shutdown
+	
+	async def __call__(self, scope, receive, send):
+		if scope['type'] == 'lifespan':
+			while True:
+				message = await receive()
+				if message['type'] == 'lifespan.startup':
+					await asyncio.gather(*[fn() for fn in self.startup])
+					await send({'type': 'lifespan.startup.complete'})
+				elif message['type'] == 'lifespan.shutdown':
+					await asyncio.gather(*[fn() for fn in self.shutdown])
+					await send({'type': 'lifespan.shutdown.complete'})
+					return
+			else:
+				pass # Handle other types
 
 
 class Router:
@@ -51,7 +72,7 @@ class Response:
 		self.headers = headers or {}
 		self.content_type = content_type
 		if content:
-			self.content = content
+			self.content = content.encode('utf-8')
 		else:
 			self.content = b""
 	
@@ -66,6 +87,6 @@ class Response:
 		)
 		await send({
 			'type': 'http.response.body',
-			'body':	self.content.encode('utf-8'),
+			'body':	self.content,
 		})
 		
