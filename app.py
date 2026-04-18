@@ -1,4 +1,5 @@
 import uvicorn
+from contextlib import asynccontextmanager
 from main import Router, Lifespan
 
 router = Router()
@@ -16,12 +17,15 @@ async def disconnect1():
 async def disconnect2():
 	print('disconnected2')
 
-lifespan = Lifespan(
-    startup=(lambda: connect_to_something(settings),
-        	 lambda: connect_to_second_thing(settings)
-			),
-    shutdown=(disconnect1, disconnect2)
-)
+@asynccontextmanager
+async def lifespan_context(settings):
+	await connect_to_something(settings),
+	await connect_to_second_thing(settings),
+	yield
+	await disconnect1()
+	await disconnect2()
+
+lifespan = Lifespan(lifespan_context(settings))
 
 @router.get('/test/{user_id}')
 async def test(request):

@@ -20,23 +20,22 @@ class Route:
 		await Response(await self.endpoint(request))(scope, receive, send)
 
 class Lifespan:
-	def __init__(self, startup, shutdown):
-		self.startup = startup
-		self.shutdown = shutdown
-	
-	async def __call__(self, scope, receive, send):
-		if scope['type'] == 'lifespan':
-			while True:
-				message = await receive()
-				if message['type'] == 'lifespan.startup':
-					await asyncio.gather(*[fn() for fn in self.startup])
-					await send({'type': 'lifespan.startup.complete'})
-				elif message['type'] == 'lifespan.shutdown':
-					await asyncio.gather(*[fn() for fn in self.shutdown])
-					await send({'type': 'lifespan.shutdown.complete'})
-					return
-			else:
-				pass # Handle other types
+    def __init__(self, context_manager):
+        self.context_manager = context_manager
+
+    async def __call__(self, scope, receive, send):
+        if scope['type'] != 'lifespan':
+            return
+        
+        async with self.context_manager:
+            message = await receive()
+            assert message['type'] == 'lifespan.startup'
+            await send({'type': 'lifespan.startup.complete'})
+
+            message = await receive()
+            assert message['type'] == 'lifespan.shutdown'
+        
+        await send({'type': 'lifespan.shutdown.complete'})
 
 
 class Router:
