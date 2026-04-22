@@ -1,23 +1,23 @@
-import asyncio
-
 class Route:
 	def __init__(self, path, endpoint, methods):
 		self.path = path
 		self.endpoint = endpoint
 		self.methods = {m.upper() for m in methods}
-	
-	async def handle(self, scope, receive, send):
+
+	def match(self, scope):
 		request_path = scope['path'].split('/')
 		route_path = self.path.split('/')
-		if len(request_path) != len(route_path): return
+		if len(request_path) != len(route_path): return 
 		params = {}
 		for rp, ap in zip(route_path, request_path):
 			if '{' in rp:
 				params[rp[1:-1]] = ap
 			elif rp != ap:
-				return
+				return 
+
+	async def handle(self, scope, receive, send, params):
 		request = Request(scope, receive, params)
-		await Response(await self.endpoint(request))(scope, receive, send)
+		await Response(content=await self.endpoint(request), status=200)(scope, receive, send)
 
 class Lifespan:
     def __init__(self, context_manager):
@@ -52,7 +52,10 @@ class Router:
 	def post(self, path):return self.route(path, ['POST'])
 	async def __call__(self, scope, receive, send):
 		for route in self.routes:
-			await route.handle(scope, receive, send)
+			params = route.match(scope)
+			if params is not None:
+				await route.handle(scope, receive, send, params)
+		await Response('Not Found', status=404)(scope, receive, send)
 		
 class Request:
 	def __init__(self, scope, receive, params):
